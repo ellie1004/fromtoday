@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useStore } from '../../../store';
 import { Button } from '../../../shared/components';
@@ -11,6 +12,7 @@ interface EditGoalModalProps {
 }
 
 export function EditGoalModal({ isOpen, onClose, goal }: EditGoalModalProps) {
+  const navigate = useNavigate();
   const updateGoal = useStore((state) => state.updateGoal);
   const [title, setTitle] = useState(goal.title);
   const [description, setDescription] = useState(goal.description || '');
@@ -56,6 +58,9 @@ export function EditGoalModal({ isOpen, onClose, goal }: EditGoalModalProps) {
     });
 
     onClose();
+
+    // Navigate to dashboard
+    navigate('/dashboard');
   };
 
   if (!isOpen) return null;

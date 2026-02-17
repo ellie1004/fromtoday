@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useStore } from '../../../store';
 import { Button } from '../../../shared/components';
@@ -10,6 +11,7 @@ interface CreateGoalModalProps {
 }
 
 export function CreateGoalModal({ isOpen, onClose }: CreateGoalModalProps) {
+  const navigate = useNavigate();
   const addGoal = useStore((state) => state.addGoal);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -45,6 +47,9 @@ export function CreateGoalModal({ isOpen, onClose }: CreateGoalModalProps) {
     setTags('');
 
     onClose();
+
+    // Navigate to dashboard
+    navigate('/dashboard');
   };
 
   if (!isOpen) return null;
@@ -53,11 +58,11 @@ export function CreateGoalModal({ isOpen, onClose }: CreateGoalModalProps) {
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div
-          className="fixed inset-0 bg-gray-900/50 transition-opacity"
+          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
           onClick={onClose}
         />
 
-        <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full">
+        <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
           <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-orange-500 to-orange-600">
             <div>
               <h2 className="text-xl font-semibold text-white">
