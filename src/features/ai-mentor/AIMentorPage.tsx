@@ -1,162 +1,232 @@
-import { Bot, Sparkles, MessageCircle, Target, TrendingUp, Zap } from 'lucide-react';
-import { useUserName } from '../../store';
+import { useState, useRef, useEffect } from 'react';
+import { Bot, Send, Sparkles, Loader2 } from 'lucide-react';
+import { useUserName, useGoals } from '../../store';
+import { Button } from '../../shared/components';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
 
 export function AIMentorPage() {
   const userName = useUserName();
+  const goals = useGoals();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // 초기 인사 메시지
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: '1',
+          role: 'assistant',
+          content: userName
+            ? `${userName}님, 반가워요! 👋\n\n저는 오늘부터의 AI 멘토예요. 목표 달성을 위해 언제든 조언이나 격려가 필요하시면 말씀해주세요!`
+            : '안녕하세요! 👋\n\n저는 오늘부터의 AI 멘토예요. 목표 달성을 위해 언제든 도와드릴게요!',
+          timestamp: new Date(),
+        },
+      ]);
+    }
+  }, [userName, messages.length]);
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input.trim(),
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      // API 호출
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: input.trim(),
+          goals: goals.map((g) => ({
+            title: g.title,
+            progress: g.progress,
+            status: g.status,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('API 오류');
+      }
+
+      const data = await response.json();
+
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.message,
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: '죄송해요, 일시적인 오류가 발생했어요. 다시 시도해주세요! 🙏',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
 
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* Hero Header */}
-      <div className="mb-8 bg-gradient-to-r from-purple-500 via-purple-600 to-blue-900 rounded-2xl p-8 shadow-2xl text-white">
-        <div className="flex items-center gap-3 mb-3">
-          <Bot className="w-10 h-10 animate-pulse" />
+    <div className="max-w-4xl mx-auto h-[calc(100vh-12rem)] flex flex-col">
+      {/* Header */}
+      <div className="mb-4 bg-gradient-to-r from-purple-500 via-purple-600 to-blue-900 rounded-2xl p-6 shadow-2xl text-white">
+        <div className="flex items-center gap-3">
+          <Bot className="w-8 h-8 animate-pulse" />
           <div>
-            <h1 className="text-4xl font-bold">
-              {userName ? `${userName}님, AI 멘토입니다` : 'AI 멘토'}
+            <h1 className="text-3xl font-bold">
+              {userName ? `${userName}님의 AI 멘토` : 'AI 멘토'}
             </h1>
             <p className="text-sm text-purple-100">
-              {userName ? `Hello ${userName}, I'm your AI Mentor` : 'AI Mentor'}
+              {userName ? `Hello ${userName}, I'm your AI Mentor` : 'Your AI Mentor'}
             </p>
           </div>
         </div>
-        <p className="text-purple-100 text-lg">
-          {userName ? `${userName}님의 목표 달성을 위한 똑똑한 파트너` : '당신의 목표 달성을 위한 똑똑한 파트너'}
-        </p>
-        <p className="text-sm text-purple-200">
-          Your smart partner for achieving goals
-        </p>
       </div>
 
-      {/* Main Content */}
-      <div className="relative min-h-[600px] bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 rounded-2xl p-12 overflow-hidden">
-        {/* Background decorative elements */}
-        <div className="absolute top-10 right-10 w-32 h-32 bg-purple-200 rounded-full opacity-20 animate-pulse"></div>
-        <div className="absolute bottom-20 left-10 w-40 h-40 bg-blue-200 rounded-full opacity-20 animate-pulse delay-1000"></div>
-
-        {/* Central AI Icon */}
-        <div className="flex flex-col items-center justify-center mb-12">
-          <div className="relative">
-            {/* Animated rings */}
-            <div className="absolute inset-0 rounded-full bg-purple-300 opacity-30 animate-ping"></div>
-            <div className="absolute inset-0 rounded-full bg-blue-300 opacity-20 animate-ping delay-500"></div>
-
-            {/* Main icon - Cute AI Robot */}
-            <div className="relative w-32 h-32 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center shadow-2xl animate-bounce">
-              <Bot className="w-16 h-16 text-white" />
+      {/* Chat Messages */}
+      <div className="flex-1 bg-white rounded-2xl shadow-xl p-6 overflow-y-auto mb-4">
+        <div className="space-y-4">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[80%] rounded-2xl p-4 ${
+                  message.role === 'user'
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white'
+                    : 'bg-gradient-to-r from-purple-50 to-blue-50 text-gray-800 border-2 border-purple-200'
+                }`}
+              >
+                {message.role === 'assistant' && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bot className="w-4 h-4 text-purple-600" />
+                    <span className="text-xs font-semibold text-purple-600">AI 멘토</span>
+                  </div>
+                )}
+                <p className="whitespace-pre-wrap">{message.content}</p>
+                <p
+                  className={`text-xs mt-2 ${
+                    message.role === 'user' ? 'text-orange-100' : 'text-gray-500'
+                  }`}
+                >
+                  {message.timestamp.toLocaleTimeString('ko-KR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+              </div>
             </div>
-          </div>
+          ))}
+
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 border-2 border-purple-200">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
+                  <span className="text-sm text-purple-600">AI 멘토가 생각하고 있어요...</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Input Area */}
+      <div className="bg-white rounded-2xl shadow-xl p-4">
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="AI 멘토에게 질문하거나 조언을 구해보세요... 💭"
+            className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            disabled={isLoading}
+          />
+          <Button
+            onClick={handleSend}
+            disabled={!input.trim() || isLoading}
+            className="px-6 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700"
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </Button>
         </div>
 
-        {/* Floating Speech Bubbles */}
-        <div className="relative space-y-8">
-          {/* Bubble 1 - Top Left */}
-          <div className="absolute -top-4 left-0 animate-float">
-            <div className="relative bg-white rounded-2xl p-4 shadow-xl max-w-xs border-l-4 border-purple-500">
-              <div className="flex items-start gap-3">
-                <Target className="w-5 h-5 text-purple-600 flex-shrink-0 mt-1" />
-                <div>
-                  <p className="font-semibold text-gray-900 mb-1">목표 관리</p>
-                  <p className="text-sm text-gray-600">
-                    사용자의 목표를 체계적으로 관리해드립니다
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">Organize your goals systematically</p>
-                </div>
-              </div>
-              {/* Speech bubble tail */}
-              <div className="absolute -bottom-2 left-8 w-4 h-4 bg-white transform rotate-45 border-l-4 border-purple-500"></div>
-            </div>
+        {/* 제안 질문들 */}
+        {messages.length === 1 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => setInput('오늘 할 일을 어떻게 시작하면 좋을까요?')}
+              className="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm rounded-full transition-colors border border-purple-200"
+            >
+              <Sparkles className="w-3 h-3 inline mr-1" />
+              오늘 할 일 조언
+            </button>
+            <button
+              onClick={() => setInput('목표를 달성하기 위한 팁을 알려주세요')}
+              className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm rounded-full transition-colors border border-blue-200"
+            >
+              <Sparkles className="w-3 h-3 inline mr-1" />
+              목표 달성 팁
+            </button>
+            <button
+              onClick={() => setInput('동기부여가 필요해요')}
+              className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 text-sm rounded-full transition-colors border border-pink-200"
+            >
+              <Sparkles className="w-3 h-3 inline mr-1" />
+              동기 부여
+            </button>
           </div>
-
-          {/* Bubble 2 - Top Right */}
-          <div className="absolute -top-4 right-0 animate-float delay-300">
-            <div className="relative bg-white rounded-2xl p-4 shadow-xl max-w-xs border-l-4 border-blue-500">
-              <div className="flex items-start gap-3">
-                <TrendingUp className="w-5 h-5 text-blue-600 flex-shrink-0 mt-1" />
-                <div>
-                  <p className="font-semibold text-gray-900 mb-1">진행 상황 분석</p>
-                  <p className="text-sm text-gray-600">
-                    실시간으로 진척도를 분석하고 피드백을 드립니다
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">Real-time progress analysis</p>
-                </div>
-              </div>
-              <div className="absolute -bottom-2 right-8 w-4 h-4 bg-white transform rotate-45 border-l-4 border-blue-500"></div>
-            </div>
-          </div>
-
-          {/* Bubble 3 - Middle Left */}
-          <div className="absolute top-40 left-8 animate-float delay-600">
-            <div className="relative bg-white rounded-2xl p-4 shadow-xl max-w-xs border-l-4 border-pink-500">
-              <div className="flex items-start gap-3">
-                <MessageCircle className="w-5 h-5 text-pink-600 flex-shrink-0 mt-1" />
-                <div>
-                  <p className="font-semibold text-gray-900 mb-1">맞춤형 조언</p>
-                  <p className="text-sm text-gray-600">
-                    당신에게 딱 맞는 실행 가능한 조언을 제공합니다
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">Personalized actionable advice</p>
-                </div>
-              </div>
-              <div className="absolute -bottom-2 left-8 w-4 h-4 bg-white transform rotate-45 border-l-4 border-pink-500"></div>
-            </div>
-          </div>
-
-          {/* Bubble 4 - Middle Right */}
-          <div className="absolute top-40 right-8 animate-float delay-900">
-            <div className="relative bg-white rounded-2xl p-4 shadow-xl max-w-xs border-l-4 border-green-500">
-              <div className="flex items-start gap-3">
-                <Zap className="w-5 h-5 text-green-600 flex-shrink-0 mt-1" />
-                <div>
-                  <p className="font-semibold text-gray-900 mb-1">동기 부여</p>
-                  <p className="text-sm text-gray-600">
-                    포기하지 않도록 지속적으로 응원하고 격려합니다
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">Continuous motivation & support</p>
-                </div>
-              </div>
-              <div className="absolute -bottom-2 right-8 w-4 h-4 bg-white transform rotate-45 border-l-4 border-green-500"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Central Message */}
-        <div className="relative z-10 text-center mt-96 pt-20">
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border-2 border-purple-200 max-w-2xl mx-auto">
-            <Sparkles className="w-12 h-12 text-purple-600 mx-auto mb-4 animate-spin-slow" />
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">
-              {userName ? `${userName}님, AI 멘토가 함께합니다` : 'AI 멘토가 함께합니다'}
-            </h2>
-            <p className="text-lg text-gray-700 mb-2 leading-relaxed">
-              {userName ? (
-                <>
-                  <span className="font-bold text-purple-600">{userName}님</span>의 <span className="font-bold text-purple-600">목표를 관리</span>해주고<br />
-                  목표를 <span className="font-bold text-blue-600">끝까지 완주</span>할 수 있도록<br />
-                  <span className="font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                    AI 멘토가 도와드립니다
-                  </span>
-                </>
-              ) : (
-                <>
-                  사용자의 <span className="font-bold text-purple-600">목표를 관리</span>해주고<br />
-                  목표를 <span className="font-bold text-blue-600">끝까지 완주</span>할 수 있도록<br />
-                  <span className="font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                    AI 멘토가 도와드립니다
-                  </span>
-                </>
-              )}
-            </p>
-            <p className="text-sm text-gray-500 mb-6">
-              AI Mentor helps you manage your goals and supports you to complete them until the end
-            </p>
-
-            {/* Coming Soon Badge */}
-            <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-full shadow-lg">
-              <Sparkles className="w-5 h-5 animate-pulse" />
-              <span className="font-semibold">곧 만나요!</span>
-              <span className="text-sm opacity-90">Coming Soon</span>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
